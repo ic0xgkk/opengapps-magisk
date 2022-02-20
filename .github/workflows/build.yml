@@ -71,7 +71,7 @@ jobs:
       - name: Create release body
         run: |
           echo "**SHA256SUM:**" >> RL.txt
-          echo "  `$(sha256sum magisk-opengapps.zip)`" >> RL.txt
+          echo "  \`$(sha256sum magisk-opengapps.zip)\`" >> RL.txt
           echo "**SourceURL:** ${{ env.SOURCE_URL }}" >> RL.txt
         
       - name: Rename
