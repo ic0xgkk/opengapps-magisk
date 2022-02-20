@@ -1,0 +1,87 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai
+  ENV_FILE: .env
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    concurrency: 
+      group: 'opengapps-magisk'
+      cancel-in-progress: true
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          submodules: true
+          fetch-depth: 1
+
+      - name: Setup
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install wget zip unzip lzip tar
+          sudo timedatectl set-timezone "${{ env.TZ }}"
+      
+      - name: Import environment variables from a file
+        shell: bash
+        run: |
+          while read line; do
+            echo "$line" >> $GITHUB_ENV
+          done < ${{ env.ENV_FILE }}
+
+      - name: Generate module.prop
+        run: |
+          cat > magisk-template/module.prop << EOF
+          id=magisk-gapps
+          name=Open GApps For Magisk
+          version=${{ env.RELEASE_VERSION }}
+          versionCode=1
+          author=Bave Lee + ic0xgkk
+          description=https://github.com/ic0xgkk/opengapps-magisk
+          minMagisk=20000
+          EOF
+          
+          echo "print"
+          cat magisk-template/module.prop
+
+
+      - name: Download
+        run: |
+          wget -t 3 -O ./gapps.zip -T 10 ${{ env.SOURCE_URL }} 
+
+      - name: Generate magisk file
+        run: |
+          rm -rf ./magisk-template/system
+          ./convert-opengappss-to-magisk.sh gapps.zip ./magisk-template/system
+
+      - name: Compress magisk module
+        run: |
+          cd ./magisk-template
+          zip -r ../magisk-opengapps.zip *
+
+      - name: Create release body
+        run: |
+          echo "**SHA256SUM: **$(sha256sums magisk-opengapps.zip)" >> RL.txt
+          echo "**SourceURL: **${{ env.SOURCE_URL }}" >> RL.txt
+
+      - name: Create release and upload
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.RELEASE_VERSION }}
+          files: ./magisk-opengapps.zip
+          body_path: ./RL.txt
