@@ -53,10 +53,6 @@ jobs:
           description=https://github.com/ic0xgkk/opengapps-magisk
           minMagisk=20000
           EOF
-          
-          echo "print"
-          cat magisk-template/module.prop
-
 
       - name: Download
         run: |
@@ -74,8 +70,13 @@ jobs:
 
       - name: Create release body
         run: |
-          echo "**SHA256SUM: **$(sha256sums magisk-opengapps.zip)" >> RL.txt
-          echo "**SourceURL: **${{ env.SOURCE_URL }}" >> RL.txt
+          echo "**SHA256SUM:**" >> RL.txt
+          echo "  `$(sha256sum magisk-opengapps.zip)`" >> RL.txt
+          echo "**SourceURL:** ${{ env.SOURCE_URL }}" >> RL.txt
+        
+      - name: Rename
+        run: |
+          mv magisk-opengapps.zip "magisk-opengapps-${{ env.RELEASE_VERSION }}.zip"
 
       - name: Create release and upload
         uses: softprops/action-gh-release@v1
@@ -83,5 +84,5 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.RELEASE_VERSION }}
-          files: ./magisk-opengapps.zip
+          files: ./magisk-opengapps-${{ env.RELEASE_VERSION }}.zip
           body_path: ./RL.txt
